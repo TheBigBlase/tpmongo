@@ -1,0 +1,274 @@
+\documentclass{article}
+\usepackage{lastpage}
+\usepackage{color}
+\usepackage[utf8]{inputenc}
+\usepackage{multicol}
+\setlength{\columnsep}{1cm}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{array}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{etoolbox}
+\usepackage{listings}
+\definecolor{purple}{rgb}{0.65, 0.12, 0.82}
+\definecolor{lightgray}{rgb}{.5,.5,.5}
+
+\makeatletter
+\patchcmd{\@maketitle}{\LARGE}{\fontsize{14}{37}\selectfont}{}{}
+\makeatother
+
+\lstdefinelanguage{JavaScript}{
+  keywords={typeof, new, true, false, catch, function, return, null, catch, switch, var, let, if, in, while, do, else, case, break},
+  keywordstyle=\color{blue}\bfseries,
+  ndkeywords={class, export, boolean, throw, async, await, implements, import, this},
+  ndkeywordstyle=\color{red}\bfseries,
+  identifierstyle=\color{black},
+  sensitive=false,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  commentstyle=\color{lightgray}\ttfamily,
+  stringstyle=\color{red}\ttfamily,
+  morestring=[b]',
+  morestring=[b]"
+}
+\title{Compte rendu du TP1 d'INFO 834}
+\author{Maxime PAULIN \and Ryan RISS}
+
+\lstset{
+  breaklines=true,
+}
+
+\hypersetup{
+	colorlinks=true,
+	linkcolor=blue,
+	filecolor=magenta,      
+	urlcolor=cyan,
+	pdftitle={Overleaf Example},
+	pdfpagemode=FullScreen,
+}
+
+
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{1pt}
+
+\fancyhead[R]{\includegraphics[height=1.5cm]{logoUSMB}}
+\fancyhead[L]{\includegraphics[height=1.5cm]{logoPolytech}}
+
+\renewcommand{\footrulewidth}{2pt}
+
+
+\fancyfoot[C]{\thepage}
+
+\geometry{
+  a4paper,
+  left=30mm,
+  right=30mm,
+  headheight=4cm,
+  top=5.5cm,
+  bottom=2.5cm
+}
+
+\begin{document}
+
+\graphicspath{}
+\maketitle
+\begin{center}
+	\includegraphics[height=5cm]{logoPolytech}
+\end{center}
+\newpage
+
+%\section*{Abstract}
+%\input{abstract}
+%\newpage
+
+%\tableofcontents
+
+\newpage
+
+\section*{Préface}
+Nous avons installé mongodb sur un vps que nous possèdons pour que cela soit 
+plus pratique a travailler en groupe de 2. Le serveur est situé à Torronto, 
+ce qui ajoute ~100ms de ping par requête.
+\setcounter{section}{5}
+\section{Curseurs}
+\begin{lstlisting}[language=javascript]
+let q6 = async () => {
+	let cursor = collections.communes.find({});
+	let timeJson = {};
+	let time = Date.now();
+	while(await cursor.hasNext()){
+		console.log(await cursor.next());
+	}
+}
+\end{lstlisting}
+On récupère l'intégralité de la base de donnée. C'est un peu long, mais ca marche.
+
+\section{Benchmark}
+\begin{lstlisting}[language=javascript]
+let q7 = async () => {
+	//find all towns
+	let townList = [];
+	let cursor = collections.communes.find({});
+	while(await cursor.hasNext()){
+		townList.push((await cursor.next()).nom_commune);
+	}
+
+	let timeJson = {};//for usefull data holder
+	let timeList = [];//for handy time calc
+	for(let town of townList){
+		let time = Date.now();
+
+		if(timeList.length > 2000) break;
+		//150ms * 39000 ~ 2hours, cant be bothered
+		await collections.communes.findOne({nom_commune: town})
+		timeJson[town] = Date.now() - time;
+		timeList.push(timeJson[town]);
+		console.log(town, ":", timeJson[town])
+		}
+		
+	let total = 0;
+	for(let k of timeList) {//calc of average
+			total += k;
+	}
+	console.log("Average time : ", total / timeList.length);
+	//140ms, but my server is hosted in Torronto (approx 110ms ping)
+	//110 when adding an index to the db
+	//after indexing : 112 ms
+}
+\end{lstlisting}
+
+On trouve en moyenne 140ms par ville :
+\begin{center}
+	\includegraphics[width=5cm]{timeq7.png}
+\end{center}
+
+\section{Index}
+En utilisant un index : 
+\begin{center}
+	\includegraphics[width=5cm]{8jecrois.png}
+\end{center}
+
+\section{\$inc et .update}
+\begin{center}
+	\includegraphics[width=10cm]{Sent/codeQ9.PNG}
+	\includegraphics[width=10cm]{Sent/resQ9_1.PNG}
+\end{center}
+Vérification du résultat
+\begin{center}
+	\includegraphics[width=10cm]{Sent/resQ9_2.PNG}
+\end{center}
+
+\pagebreak
+\section{Array dans les documents}
+Insert: 
+\begin{center}
+	\includegraphics[width=6cm]{Sent/insertQ10.PNG}
+\end{center}
+pull:
+\begin{center}
+	\includegraphics[width=8cm]{Sent/poule Q10.PNG}
+\end{center}
+	result pull:
+\begin{center}
+	\includegraphics[width=8cm]{Sent/res poule Q10.PNG}
+\end{center}
+	updates:
+\begin{center}
+	\includegraphics[width=8cm]{Sent/Q10 update.PNG}
+	\includegraphics[width=8cm]{Sent/Q10 update 2.PNG}
+\end{center}
+	results:
+\begin{center}
+	\includegraphics[width=5cm]{Sent/resUpdateQ10.PNG}
+	\includegraphics[width=7cm]{Sent/res 2nd update Q10.PNG}
+\end{center}
+
+\section{Liaison de document}
+On insert, puis drop et remplace:
+\begin{center}
+	\includegraphics[width=7cm]{Sent2/Q11 insert users.PNG}
+	\includegraphics[width=7cm]{Sent2/insert Q11.PNG}
+\end{center}
+On vérifie :
+\begin{center}
+	\includegraphics[width=7cm]{Sent2/Q11 code.PNG}
+	\includegraphics[width=7cm]{Sent2/res Q11.PNG}
+\end{center}
+\pagebreak
+En python:
+\begin{center}
+	\includegraphics[width=10cm]{Sent2/Q11 pymongo code.PNG}
+\end{center}
+
+résultat:
+\begin{center}
+	\includegraphics[width=15cm]{Sent2/Q11 pymongo res.PNG}
+\end{center}
+
+\section{Authentification}
+Nous avons commencé le TP par protèger la base de donnée. 
+Chaque utilisateur (sauf ceux de maxime, qui sont admin) 
+n'as les droits que pour sa base. Voici ce qu'on obtient 
+dès que quelqu'un se connecte anonymement :
+
+\begin{center}
+	\includegraphics[width=10cm]{auth.png}
+\end{center}
+
+\section{Map Reducer}
+
+\begin{center}
+	\includegraphics[width=5cm]{mapReducer.png}
+\end{center}
+
+\section{Backup and Dump}
+
+On fait un backup : 
+\begin{lstlisting}
+$mongodump -u USERNAMETOHIDE -p PASSWORDTHATISVERYSAFE --out=/tmp
+2023-02-05T21:32:32.923+0000	writing admin.system.users to /tmp/admin/system.users.bson
+2023-02-05T21:32:32.924+0000	done dumping admin.system.users (7 documents)
+2023-02-05T21:32:32.925+0000	writing admin.system.version to /tmp/admin/system.version.bson
+2023-02-05T21:32:32.926+0000	done dumping admin.system.version (2 documents)
+2023-02-05T21:32:32.929+0000	writing France.communes to /tmp/France/communes.bson
+2023-02-05T21:32:32.931+0000	writing France.yes to /tmp/France/yes.bson
+2023-02-05T21:32:32.934+0000	writing France.mapReducerOut to /tmp/France/mapReducerOut.bson
+2023-02-05T21:32:32.937+0000	writing France.orders to /tmp/France/orders.bson
+2023-02-05T21:32:32.950+0000	done dumping France.orders (10 documents)
+2023-02-05T21:32:32.959+0000	done dumping France.mapReducerOut (4020 documents)
+2023-02-05T21:32:32.959+0000	writing France.map\_reduce\_example to /tmp/France/map\_reduce\_example.bson
+2023-02-05T21:32:32.968+0000	done dumping France.yes (4020 documents)
+2023-02-05T21:32:32.968+0000	writing mailing.users to /tmp/mailing/users.bson
+2023-02-05T21:32:32.971+0000	done dumping France.map\_reduce\_example (4 documents)
+2023-02-05T21:32:32.971+0000	writing Analytics.freq to /tmp/Analytics/freq.bson
+2023-02-05T21:32:32.971+0000	writing mailing.lists to /tmp/mailing/lists.bson
+2023-02-05T21:32:32.972+0000	done dumping mailing.users (3 documents)
+2023-02-05T21:32:32.973+0000	done dumping Analytics.freq (1 document)
+2023-02-05T21:32:32.974+0000	writing France.map reduce example to /tmp/France/map+reduce+example.bson
+2023-02-05T21:32:32.974+0000	done dumping mailing.lists (1 document)
+2023-02-05T21:32:32.975+0000	done dumping France.map reduce example (0 documents)
+2023-02-05T21:32:33.148+0000	done dumping France.communes (39201 documents)
+\end{lstlisting}
+On le recharge:
+
+\begin{lstlisting}
+$sudo mongorestore -u STILLAGOODUSERNAME -p EPICPASSWORD /tmp/Analytics/freq.bson
+2023-02-05T21:38:41.589+0000	WARNING: On some systems, a password provided directly using --password may be visible to system status programs such as `ps` that may be invoked by other users. Consider omitting the password to provide it via stdin, orusing the --config option to specify a configuration file with the password.
+2023-02-05T21:38:41.606+0000	checking for collection data in /tmp/Analytics/freq.bson
+2023-02-05T21:38:41.606+0000	reading metadata for Analytics.freq from /tmp/Analytics/freq.metadata.json
+2023-02-05T21:38:41.607+0000	restoring to existing collection Analytics.freq without dropping
+2023-02-05T21:38:41.607+0000	restoring Analytics.freq from /tmp/Analytics/freq.bson
+2023-02-05T21:38:41.613+0000	continuing through error: E11000 duplicate keyerror collection: Analytics.freq index: _id_ dup key: { _id: ObjectId('63e008bacc12ed9b5d0c54f8') }
+2023-02-05T21:38:41.649+0000	finished restoring Analytics.freq (0 documents, 1 failure)
+2023-02-05T21:38:41.649+0000	no indexes to restore for collection Analytics.freq
+2023-02-05T21:38:41.649+0000	0 document(s) restored successfully. 
+1 document(s) failed to restore.
+\end{lstlisting}
+
+Ici, on ne recharge pas, car la base de donnée tourne déjà avec les élements charger, et n'authorise 
+pas les duplicat d'id.
+
+
+\end{document}
